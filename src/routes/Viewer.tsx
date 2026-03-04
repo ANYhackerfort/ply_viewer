@@ -70,6 +70,20 @@ export default function Viewer() {
             slantDeg={{ pitch: -2 }}
             />
 
+            <PlyBundle
+            plyUrls={[
+                "/ply/Ocean_science_0.ply",
+                "/ply/Ocean_science_1.ply",
+                "/ply/Ocean_science_2.ply",
+            ]}
+            mode="mesh"
+            pointSize={1.5}
+            maxPoints={600000}
+            liftU={-13}
+            shift={{ e: 20, n: -60, u: 0 }}
+            slantDeg={{ pitch: -2 }}
+            />
+
 
         {/* <GaussianSplatPlyLayer
             splatUrl="/ply/gaussian_splat.ply"
