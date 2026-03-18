@@ -35,7 +35,7 @@ export default function ThreeCanvas({
   }, [])
 
   const camera = useMemo(() => {
-    const c = new THREE.PerspectiveCamera(55, 1, 0.01, 200000)
+    const c = new THREE.PerspectiveCamera(75, 1, 0.01, 200000)
     c.position.set(cameraPos.x, cameraPos.y, cameraPos.z)
     c.up.set(0, 0, 1) // ENU Z-up
     c.lookAt(target.x, target.y, target.z)
@@ -62,10 +62,6 @@ export default function ThreeCanvas({
     const axes = new THREE.AxesHelper(50)
     scene.add(axes)
 
-    const grid = new THREE.GridHelper(2000, 40)
-    grid.rotation.x = Math.PI / 2
-    scene.add(grid)
-
     const controls = new OrbitControls(camera, renderer.domElement)
 
     controls.target.set(target.x, target.y, target.z)
@@ -80,7 +76,7 @@ export default function ThreeCanvas({
     controls.minDistance = 0.05
     controls.maxDistance = 50000
 
-    controls.maxPolarAngle = Math.PI / 2 - 0.001
+    // controls.maxPolarAngle = Math.PI / 2 - 0.001
 
     // -----------------------------
     // WASD MOVEMENT
@@ -99,7 +95,8 @@ export default function ThreeCanvas({
     window.addEventListener("keydown", onKeyDown)
     window.addEventListener("keyup", onKeyUp)
 
-    const moveSpeed = 3
+    const moveSpeed = 1
+    const vertSpeed = 0.5
 
     const forward = new THREE.Vector3()
     const right = new THREE.Vector3()
@@ -142,8 +139,8 @@ export default function ThreeCanvas({
       if (keys["KeyA"]) camera.position.addScaledVector(right, -moveSpeed)
       if (keys["KeyD"]) camera.position.addScaledVector(right, moveSpeed)
 
-      if (keys["KeyQ"]) camera.position.z -= moveSpeed
-      if (keys["KeyE"]) camera.position.z += moveSpeed
+      if (keys["KeyQ"]) camera.position.z -= vertSpeed
+      if (keys["KeyE"]) camera.position.z += vertSpeed
 
       controls.target.copy(camera.position.clone().add(forward))
 

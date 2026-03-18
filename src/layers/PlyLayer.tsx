@@ -2,30 +2,16 @@
 import React, { useContext, useEffect, useRef } from "react"
 import * as THREE from "three"
 import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js"
-import PlyBundle from "../components/PlyBundle"
 import { ThreeContext } from "../components/ThreeCanvas"
 
 type Props = {
   plyUrl: string
-
-  // optional visual scaling (usually keep 1 for ENU meters)
   scale?: number
-
-  // "points" is safest / fastest
   mode?: "points" | "mesh"
-
-  // points settings
-  pointSize?: number // pixels
-  maxPoints?: number // downsample cap (simple stride)
-
-  // z lift to avoid z-fighting if needed
+  pointSize?: number
+  maxPoints?: number
   liftU?: number
-
-  // NEW: shift in ENU meters (applied after scale)
   shift?: { e?: number; n?: number; u?: number }
-
-  // NEW: slant/rotate the whole cloud (degrees). Applied about origin (0,0,0).
-  // yaw = about Z, pitch = about X, roll = about Y (Three.js default axes)
   slantDeg?: { yaw?: number; pitch?: number; roll?: number }
 }
 
@@ -66,13 +52,7 @@ export default function PlyLayer({
 
         const dsGeom = downsampleGeometry(geom, maxPoints)
 
-        // Apply scale + lift + shift + slant by modifying vertex positions (keeps ENU-consistent)
-        applyTransform(dsGeom, {
-          scale,
-          liftU,
-          shift,
-          slantDeg,
-        })
+        applyTransform(dsGeom, { scale, liftU, shift, slantDeg })
 
         if (mode === "mesh" && !dsGeom.getAttribute("normal")) {
           dsGeom.computeVertexNormals()
@@ -83,29 +63,49 @@ export default function PlyLayer({
         if (mode === "mesh" && dsGeom.index) {
           const mat = new THREE.MeshStandardMaterial({
             vertexColors: hasColor,
-            roughness: 1,
-            metalness: 0,
+            roughness: 0.6,       // less rough = slightly glossy
+            metalness: 0.1,       // subtle metallic sheen
             side: THREE.DoubleSide,
+            envMapIntensity: 1.2, // picks up HDR lighting nicely
           })
           const mesh = new THREE.Mesh(dsGeom, mat)
           root.add(mesh)
+
+          // Smooth shading: merge vertex normals
+          dsGeom.normalizeNormals()
+
         } else {
-          const mat = new THREE.PointsMaterial({
+          // Two-layer point cloud: base layer + glow layer on top
+
+          const baseMat = new THREE.PointsMaterial({
             size: pointSize,
             sizeAttenuation: false,
             vertexColors: hasColor,
-            color: hasColor ? 0xffffff : 0xd0d0d0,
+            color: hasColor ? 0xffffff : 0xd0d0d0, // back to original neutral color
+            transparent: false,
+            opacity: 1.0,
           })
-          const pts = new THREE.Points(dsGeom, mat)
-          root.add(pts)
+
+          const glowMat = new THREE.PointsMaterial({
+            size: pointSize * 1.2,              // much smaller halo
+            sizeAttenuation: false,
+            vertexColors: hasColor,
+            color: hasColor ? 0xffffff : 0xd0d0d0,
+            transparent: true,
+            opacity: 0.02,                      // barely visible
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          })
+
+
+          root.add(new THREE.Points(dsGeom, baseMat))
+          root.add(new THREE.Points(dsGeom, glowMat))
         }
 
         console.log("[PlyLayer] loaded:", plyUrl, "verts:", dsGeom.getAttribute("position")!.count)
       },
       undefined,
-      (err) => {
-        console.error("[PlyLayer] FAILED:", plyUrl, err)
-      }
+      (err) => console.error("[PlyLayer] FAILED:", plyUrl, err)
     )
 
     return () => {
@@ -122,19 +122,9 @@ export default function PlyLayer({
       rootRef.current = null
     }
   }, [
-    ctx,
-    plyUrl,
-    scale,
-    mode,
-    pointSize,
-    maxPoints,
-    liftU,
-    shift?.e,
-    shift?.n,
-    shift?.u,
-    slantDeg?.yaw,
-    slantDeg?.pitch,
-    slantDeg?.roll,
+    ctx, plyUrl, scale, mode, pointSize, maxPoints, liftU,
+    shift?.e, shift?.n, shift?.u,
+    slantDeg?.yaw, slantDeg?.pitch, slantDeg?.roll,
   ])
 
   return null
@@ -150,8 +140,7 @@ function downsampleGeometry(src: THREE.BufferGeometry, maxPoints: number) {
   const stride = Math.ceil(n / maxPoints)
   const dst = new THREE.BufferGeometry()
 
-  const attrsToCopy = ["position", "normal", "color"]
-  for (const name of attrsToCopy) {
+  for (const name of ["position", "normal", "color"]) {
     const a = src.getAttribute(name) as THREE.BufferAttribute | undefined
     if (!a) continue
     const itemSize = a.itemSize
@@ -187,28 +176,20 @@ function applyTransform(
   const shN = opts.shift?.n ?? 0
   const shU = (opts.shift?.u ?? 0) + liftU
 
-  const yaw = degToRad(opts.slantDeg?.yaw ?? 0) // Z
-  const pitch = degToRad(opts.slantDeg?.pitch ?? 0) // X
-  const roll = degToRad(opts.slantDeg?.roll ?? 0) // Y
+  const yaw   = degToRad(opts.slantDeg?.yaw   ?? 0)
+  const pitch = degToRad(opts.slantDeg?.pitch  ?? 0)
+  const roll  = degToRad(opts.slantDeg?.roll   ?? 0)
 
-  // Rotation matrix (Yaw * Pitch * Roll) using Three's Euler default order "XYZ"
-  // We want: rotate around X (pitch), then Y (roll), then Z (yaw) -> "XYZ"
   const euler = new THREE.Euler(pitch, roll, yaw, "XYZ")
   const rot = new THREE.Matrix4().makeRotationFromEuler(euler)
   const v = new THREE.Vector3()
 
   for (let i = 0; i < pos.count; i++) {
-    // scale first
     v.set(pos.getX(i) * s, pos.getY(i) * s, pos.getZ(i) * s)
-
-    // slant (rotate about origin)
     v.applyMatrix4(rot)
-
-    // shift after rotation
     v.x += shE
     v.y += shN
     v.z += shU
-
     pos.setXYZ(i, v.x, v.y, v.z)
   }
 
