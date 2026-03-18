@@ -1,5 +1,5 @@
 // PlyLayer.tsx
-import React, { useContext, useEffect, useRef } from "react"
+import { useContext, useEffect, useRef } from "react"
 import * as THREE from "three"
 import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js"
 import { ThreeContext } from "../components/ThreeCanvas"

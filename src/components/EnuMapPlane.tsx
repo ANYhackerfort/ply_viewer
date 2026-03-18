@@ -1,5 +1,5 @@
 // EnuMapPlane.tsx
-import React, { useContext, useEffect, useRef } from "react"
+import { useContext, useEffect, useRef } from "react"
 import * as THREE from "three"
 import { ThreeContext } from "./ThreeCanvas"
 
