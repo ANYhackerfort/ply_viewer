@@ -92,10 +92,30 @@ export default function ThreeCanvas({
       keys[e.code] = false
     }
 
+    const onKeyPress = (e: KeyboardEvent) => {
+      if (e.code !== "KeyP") return
+
+      const pos = camera.position
+      const dir = new THREE.Vector3()
+      camera.getWorldDirection(dir)
+
+      console.log(`📍 Position: e=${pos.x.toFixed(1)}, n=${pos.y.toFixed(1)}, u=${pos.z.toFixed(1)}`)
+      console.log(`🧭 Direction: x=${dir.x.toFixed(3)}, y=${dir.y.toFixed(3)}, z=${dir.z.toFixed(3)}`)
+
+      // Drop a pin dot at current position
+      const pinGeo = new THREE.SphereGeometry(2, 16, 16)
+      const pinMat = new THREE.MeshBasicMaterial({ color: 0xff3b3b })
+      const pin = new THREE.Mesh(pinGeo, pinMat)
+      pin.position.copy(pos)
+      scene.add(pin)
+    }
+
+    window.addEventListener("keypress", onKeyPress)
+
     window.addEventListener("keydown", onKeyDown)
     window.addEventListener("keyup", onKeyUp)
 
-    const moveSpeed = 1
+    const moveSpeed = 2
     const vertSpeed = 0.5
 
     const forward = new THREE.Vector3()
@@ -140,7 +160,7 @@ export default function ThreeCanvas({
       if (keys["KeyD"]) camera.position.addScaledVector(right, moveSpeed)
 
       if (keys["KeyQ"]) camera.position.z -= vertSpeed
-      if (keys["KeyE"]) camera.position.z += vertSpeed
+      if (keys["KeyE"]) camera.position.z += moveSpeed
 
       controls.target.copy(camera.position.clone().add(forward))
 

@@ -1,74 +1,78 @@
-# React + TypeScript + Vite
+# 3D Reconstruction Web Viewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> React + Three.js viewer for sparse point clouds and Gaussian splats, aligned to ENU coordinates.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Adding a Point Cloud
 
-## React Compiler
+Drop your PLY files into `public/ply/` then add a `PlyBundle` into `Viewer.tsx` inside the `<ThreeCanvas>`:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```tsx
+<PlyBundle
+  plyUrls={[
+    "/ply/HFH_sparse_0.ply",
+    "/ply/HFH_sparse_1.ply",
+  ]}
+  mode="mesh"
+  pointSize={1.5}
+  maxPoints={600000}
+  liftU={2}
+  shift={{ e: 766, n: -43, u: 0 }}
+  slantDeg={{ pitch: 0 }}
+  scale={1.2}
+/>
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Props Reference
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Prop | Description |
+|---|---|
+| `plyUrls` | Array of PLY file paths from `public/ply/` — bundle them together if they belong to the same model |
+| `mode` | `"points"` or `"mesh"` |
+| `pointSize` | How big each point renders — increase to make the cloud look denser |
+| `maxPoints` | Cap on how many points are rendered — lower this if the scene is lagging |
+| `liftU` | Z-offset in meters — needed for some models as an error correction because the map can sometimes alias it |
+| `shift` | ENU offset in meters — this is automatically calculated by the backend script to align the model to ENU coordinates |
+| `slantDeg` | Not needed, but there to better align if necessary (`pitch`, `yaw`, `roll` in degrees) |
+| `scale` | Set to `1.2` to match the scale of the map — the map was also scaled up to make everything bigger in the canvas space |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## What's Currently in the Scene
+
+- **ENU coordinate center** — everything is aligned to a shared ENU origin
+- **Sun/HDR background** — lights up the entire scene so models render clearly
+
+---
+
+## Adding New Components
+
+New things go in the `components/` folder, then get added into `<ThreeCanvas>` in `Viewer.tsx` — things like text labels, markers, overlays, etc.
+
 ```
-# ply_viewer
+src/
+├── components/       ← add new components here
+│   ├── ThreeCanvas.tsx
+│   ├── EnuMapPlane.tsx
+│   └── YourNewComponent.tsx
+├── layers/
+│   ├── PlyLayer.tsx
+│   └── CameraPairsLayer.tsx
+└── pages/
+    └── Viewer.tsx    ← add components into the canvas here
+```
+
+Then in `Viewer.tsx`:
+
+```tsx
+<ThreeCanvas>
+  <HDRBackground />
+  <EnuMapPlane ... />
+  <PlyBundle ... />
+  <YourNewComponent />   {/* ← add it here */}
+</ThreeCanvas>
+```
+
+> [!NOTE]
+> Any component that needs to add objects to the Three.js scene should use `useContext(ThreeContext)` to access `scene`, `camera`, and `renderer` — not any React Three Fiber hooks.

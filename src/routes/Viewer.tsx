@@ -9,6 +9,11 @@ import CameraPairsLayer from "../layers/CameraPairsLayer"
 import PlyLayer from "../layers/PlyLayer"
 import PlyBundle from "../components/PlyBundle"
 
+// ── CAMERA DEFAULTS ──────────────────────────────────────────
+const CAMERA_POS = { x: 495.3, y: -32.6, z: 19.4 } // camera position
+const CAMERA_TARGET = { x: 495.3 + 0.762, y: -32.6 + 0.647, z: 19.4 + 0.000 } // what you look at
+// ─────────────────────────────────────────────────────────────
+
 function HDRBackground() {
   const ctx = useContext(ThreeContext)
 
@@ -28,7 +33,7 @@ function HDRBackground() {
 export default function Viewer() {
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
-      <ThreeCanvas>
+      <ThreeCanvas cameraPos={CAMERA_POS} target={CAMERA_TARGET}>
         <HDRBackground />
 
         {/* UCSB map */}
@@ -68,9 +73,7 @@ export default function Viewer() {
 
         <PlyBundle
           plyUrls={[
-            // "/ply/Marine_science_sparse_0.ply",
             "/ply/Marine_science_sparse_1.ply",
- 
           ]}
           mode="mesh"
           pointSize={1.5}
@@ -140,7 +143,7 @@ export default function Viewer() {
           scale={1.2}
         />
 
-          <PlyBundle
+        <PlyBundle
           plyUrls={[
             "/ply/HFH_sparse_0.ply",
             "/ply/HFH_sparse_1.ply",
@@ -153,7 +156,6 @@ export default function Viewer() {
           slantDeg={{ pitch: 0 }}
           scale={1.2}
         />
-
 
         <CameraPairsLayer
           jsonUrl="/camera_poses/campbell/campbell_cameras.json"
