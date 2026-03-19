@@ -143,6 +143,7 @@ export default function Viewer() {
           <PlyBundle
           plyUrls={[
             "/ply/HFH_sparse_0.ply",
+            "/ply/HFH_sparse_1.ply",
           ]}
           mode="mesh"
           pointSize={1.5}
